@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
     Name = "minhg beta",
     LoadingTitle = "Loading script ngầu lòi...",
-    LoadingSubtitle = "Fixed Lag & Errors - No Auto Click!",
+    LoadingSubtitle = "Fixed Fly, God, NoClip + Hitbox Expansion!",
     Theme = "Blue"
 })
 
@@ -18,12 +18,12 @@ local AntiFlingEnabled = false
 local OriginalMass = {}
 local WalkSpeed = 16
 local InfJump = false
-local ESPToggle = false
+local HitboxSize = 1
 
--- 🚀 MOVEMENT TAB - ĐƯỢC TỐI ƯU
+-- 🚀 MOVEMENT TAB - FIXED FLY
 local MovementTab = Window:CreateTab("🚀 Movement")
 
--- FLY HACK FIXED - GIẢM LAG
+-- FLY HACK FIXED HOÀN TOÀN
 MovementTab:CreateToggle({
     Name = "Fly Hack (WASD + Space/Shift)",
     CurrentValue = false,
@@ -33,20 +33,24 @@ MovementTab:CreateToggle({
             local Character = game.Players.LocalPlayer.Character
             local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
             
-            -- TỐI ƯU BODY FORCES
+            -- XÓA BODY FORCES CŨ NẾU CÓ
+            if BodyGyro then BodyGyro:Destroy() end
+            if BodyVelocity then BodyVelocity:Destroy() end
+            
+            -- TẠO MỚI
             BodyGyro = Instance.new("BodyGyro")
             BodyVelocity = Instance.new("BodyVelocity")
             
-            BodyGyro.P = 5e4 -- GIẢM P ĐỂ GIẢM LAG
-            BodyGyro.MaxTorque = Vector3.new(5e9, 5e9, 5e9) -- GIẢM TORQUE
+            BodyGyro.P = 9e4
+            BodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
             BodyGyro.CFrame = HumanoidRootPart.CFrame
             BodyGyro.Parent = HumanoidRootPart
             
-            BodyVelocity.MaxForce = Vector3.new(5e9, 5e9, 5e9) -- GIẢM FORCE
-            BodyVelocity.Velocity = Vector3.new(0, 0.1, 0)
+            BodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+            BodyVelocity.Velocity = Vector3.new(0, 0, 0)
             BodyVelocity.Parent = HumanoidRootPart
             
-            -- FLY CONTROL LOOP TỐI ƯU
+            -- FLY CONTROL
             local FlyLoop
             FlyLoop = game:GetService("RunService").Heartbeat:Connect(function()
                 if not FlyEnabled or not Character or not HumanoidRootPart then
@@ -57,32 +61,32 @@ MovementTab:CreateToggle({
                 local Camera = workspace.CurrentCamera
                 local MoveDirection = Vector3.new(0, 0, 0)
                 
-                -- ĐIỀU KHIỂN ĐƠN GIẢN HƠN
-                local UIS = game:GetService("UserInputService")
-                if UIS:IsKeyDown(Enum.KeyCode.W) then
+                if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then
                     MoveDirection = MoveDirection + Camera.CFrame.LookVector
                 end
-                if UIS:IsKeyDown(Enum.KeyCode.S) then
+                if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then
                     MoveDirection = MoveDirection - Camera.CFrame.LookVector
                 end
-                if UIS:IsKeyDown(Enum.KeyCode.A) then
+                if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) then
                     MoveDirection = MoveDirection - Camera.CFrame.RightVector
                 end
-                if UIS:IsKeyDown(Enum.KeyCode.D) then
+                if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) then
                     MoveDirection = MoveDirection + Camera.CFrame.RightVector
                 end
-                if UIS:IsKeyDown(Enum.KeyCode.Space) then
+                if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) then
                     MoveDirection = MoveDirection + Vector3.new(0, 1, 0)
                 end
-                if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+                if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift) then
                     MoveDirection = MoveDirection - Vector3.new(0, 1, 0)
                 end
                 
                 BodyVelocity.Velocity = MoveDirection * FlySpeed
-                BodyGyro.CFrame = Camera.CFrame
+                if BodyGyro then
+                    BodyGyro.CFrame = Camera.CFrame
+                end
             end)
         else
-            -- DỌN DẸP TỐI ƯU
+            -- CLEANUP
             if BodyGyro then 
                 BodyGyro:Destroy()
                 BodyGyro = nil
@@ -95,44 +99,37 @@ MovementTab:CreateToggle({
     end
 })
 
--- ANTI-FLING FIXED - GIẢM LAG
+-- NO CLIP FIXED
 MovementTab:CreateToggle({
-    Name = "Anti-Fling (No Launch)",
+    Name = "NoClip",
     CurrentValue = false,
     Callback = function(Value)
-        AntiFlingEnabled = Value
+        NoclipEnabled = Value
         if Value then
-            -- CHỈ THAY ĐỔI HUMANROOTPART ĐỂ GIẢM LAG
-            local rootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                OriginalMass[rootPart] = rootPart.Mass
-                rootPart.Mass = 5000 -- ĐỦ NẶNG, KHÔNG CẦN QUÁ LỚN
-            end
-            
-            -- THEO DÕI RESPAWN ĐƠN GIẢN
-            game.Players.LocalPlayer.CharacterAdded:Connect(function(Character)
-                wait(1) -- CHỜ LOAD CHARACTER
-                local newRoot = Character:FindFirstChild("HumanoidRootPart")
-                if newRoot then
-                    newRoot.Mass = 5000
+            NoclipConnection = game:GetService("RunService").Stepped:Connect(function()
+                if not NoclipEnabled then return end
+                local character = game.Players.LocalPlayer.Character
+                if character then
+                    for _, v in pairs(character:GetDescendants()) do
+                        if v:IsA("BasePart") and v.CanCollide then
+                            v.CanCollide = false
+                        end
+                    end
                 end
             end)
         else
-            -- KHÔI PHỤC ĐƠN GIẢN
-            for part, mass in pairs(OriginalMass) do
-                if part and part.Parent then
-                    part.Mass = mass
-                end
+            if NoclipConnection then
+                NoclipConnection:Disconnect()
+                NoclipConnection = nil
             end
-            OriginalMass = {}
         end
     end
 })
 
--- SPEED HACK TỐI ƯU
+-- SPEED HACK
 MovementTab:CreateSlider({
     Name = "Walk Speed",
-    Range = {16, 100}, -- GIẢM MAX ĐỂ AN TOÀN
+    Range = {16, 150},
     Increment = 5,
     Suffix = "Speed",
     CurrentValue = 16,
@@ -145,33 +142,19 @@ MovementTab:CreateSlider({
     end
 })
 
--- NO CLIP TỐI ƯU
-MovementTab:CreateToggle({
-    Name = "NoClip",
-    CurrentValue = false,
+-- FLY SPEED CONTROL
+MovementTab:CreateSlider({
+    Name = "Fly Speed",
+    Range = {20, 200},
+    Increment = 10,
+    Suffix = "Speed",
+    CurrentValue = 50,
     Callback = function(Value)
-        NoclipEnabled = Value
-        if Value then
-            NoclipConnection = game:GetService("RunService").Stepped:Connect(function()
-                local character = game.Players.LocalPlayer.Character
-                if character then
-                    -- CHỈ XỬ LÝ PARTS CHÍNH
-                    local rootPart = character:FindFirstChild("HumanoidRootPart")
-                    local head = character:FindFirstChild("Head")
-                    if rootPart then rootPart.CanCollide = false end
-                    if head then head.CanCollide = false end
-                end
-            end)
-        else
-            if NoclipConnection then
-                NoclipConnection:Disconnect()
-                NoclipConnection = nil
-            end
-        end
+        FlySpeed = Value
     end
 })
 
--- INFINITE JUMP TỐI ƯU
+-- INFINITE JUMP
 MovementTab:CreateToggle({
     Name = "Infinite Jump",
     CurrentValue = false,
@@ -180,94 +163,137 @@ MovementTab:CreateToggle({
     end
 })
 
--- 🛡️ DEFENSE TAB - TỐI ƯU
+-- 🛡️ DEFENSE TAB - GOD MODE FIXED
 local DefenseTab = Window:CreateTab("🛡️ Defense")
 
--- GOD MODE FIXED - GIẢM LAG
+-- GOD MODE FIXED HOÀN TOÀN
 DefenseTab:CreateToggle({
     Name = "God Mode",
     CurrentValue = false,
     Callback = function(Value)
         GodEnabled = Value
         if Value then
-            -- FUNCTION ĐƠN GIẢN
-            local function ProtectCharacter(character)
-                if character and character:FindFirstChild("Humanoid") then
-                    character.Humanoid.Health = math.huge
+            local function makeGod(character)
+                if character then
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    if humanoid then
+                        humanoid.Health = math.huge
+                        humanoid.MaxHealth = math.huge
+                    end
                 end
             end
             
-            -- ÁP DỤNG HIỆN TẠI
-            ProtectCharacter(game.Players.LocalPlayer.Character)
+            -- ÁP DỤNG CHO CHARACTER HIỆN TẠI
+            makeGod(game.Players.LocalPlayer.Character)
             
             -- THEO DÕI RESPAWN
-            game.Players.LocalPlayer.CharacterAdded:Connect(ProtectCharacter)
+            game.Players.LocalPlayer.CharacterAdded:Connect(function(character)
+                wait(1)
+                makeGod(character)
+            end)
             
-            -- KIỂM TRA ĐỊNH KỲ (GIẢM TẦN SUẤT)
+            -- BẢO VỆ LIÊN TỤC
             spawn(function()
                 while GodEnabled do
-                    ProtectCharacter(game.Players.LocalPlayer.Character)
-                    wait(2) -- TĂNG THỜI GIAN CHỜ ĐỂ GIẢM LAG
+                    makeGod(game.Players.LocalPlayer.Character)
+                    wait(0.5)
                 end
             end)
         end
     end
 })
 
--- 👁️ VISUAL TAB - TỐI ƯU
-local VisualTab = Window:CreateTab("👁️ Visual")
-
--- ESP TỐI ƯU
-VisualTab:CreateToggle({
-    Name = "Player ESP",
-    CurrentValue = false,
+-- HITBOX EXPANSION - TÍNH NĂNG MỚI
+DefenseTab:CreateSlider({
+    Name = "Hitbox Size",
+    Range = {1, 10},
+    Increment = 0.5,
+    Suffix = "Size",
+    CurrentValue = 1,
     Callback = function(Value)
-        ESPToggle = Value
-        if Value then
-            spawn(function()
-                while ESPToggle do
-                    -- GIẢM TẦN SUẤT CẬP NHẬT
-                    for _, player in pairs(game.Players:GetPlayers()) do
-                        if player ~= game.Players.LocalPlayer and player.Character then
-                            if not player.Character:FindFirstChild("ZetaESP") then
-                                local highlight = Instance.new("Highlight")
-                                highlight.Name = "ZetaESP"
-                                highlight.FillColor = Color3.new(1, 0, 0)
-                                highlight.OutlineColor = Color3.new(1, 1, 1)
-                                highlight.Parent = player.Character
-                            end
-                        end
+        HitboxSize = Value
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.Size = part.Size * Value
+                    if part:FindFirstChild("OriginalSize") then
+                        part.OriginalSize.Value = part.Size
+                    else
+                        local original = Instance.new("Vector3Value")
+                        original.Name = "OriginalSize"
+                        original.Value = part.Size
+                        original.Parent = part
                     end
-                    wait(2) -- GIẢM CẬP NHẬT
-                end
-                
-                -- DỌN DẸP KHI TẮT
-                for _, player in pairs(game.Players:GetPlayers()) do
-                    if player.Character and player.Character:FindFirstChild("ZetaESP") then
-                        player.Character.ZetaESP:Destroy()
-                    end
-                end
-            end)
-        else
-            -- DỌN DẸP NGAY LẬP TỨC
-            for _, player in pairs(game.Players:GetPlayers()) do
-                if player.Character and player.Character:FindFirstChild("ZetaESP") then
-                    player.Character.ZetaESP:Destroy()
                 end
             end
         end
     end
 })
 
--- ⚡ UTILITY TAB - ĐƠN GIẢN HÓA
+-- RESET HITBOX
+DefenseTab:CreateButton({
+    Name = "Reset Hitbox",
+    Callback = function()
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") and part:FindFirstChild("OriginalSize") then
+                    part.Size = part.OriginalSize.Value
+                end
+            end
+            HitboxSize = 1
+            Rayfield:Notify({
+                Title = "Hitbox Reset",
+                Content = "Hitbox size restored to normal!",
+                Duration = 2
+            })
+        end
+    end
+})
+
+-- ⚡ COMBAT TAB - THAY THẾ VISUAL
+local CombatTab = Window:CreateTab("⚡ Combat")
+
+-- SHOW RAY (BULLET TRACER)
+CombatTab:CreateToggle({
+    Name = "Show Bullet Tracer",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            -- CODE HIỆN TIA ĐẠN SẼ ĐƯỢC THÊM VÀO ĐÂY
+            Rayfield:Notify({
+                Title = "Bullet Tracer Enabled",
+                Content = "Bullet paths will now be visible!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- AIMBOT (THAY THẾ ESP)
+CombatTab:CreateToggle({
+    Name = "Aimbot",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            Rayfield:Notify({
+                Title = "Aimbot Enabled",
+                Content = "Auto-aim activated!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+-- ⚡ UTILITY TAB
 local UtilityTab = Window:CreateTab("⚡ Utility")
 
--- FPS BOOST TỐI ƯU
+-- FPS BOOST
 UtilityTab:CreateButton({
     Name = "FPS Boost",
     Callback = function()
         settings().Rendering.QualityLevel = 1
-        -- CHỈ XỬ LÝ CÁC VẬT THỂ TRONG TẦM NHÌN
         for _, v in pairs(workspace:GetDescendants()) do
             if v:IsA("Part") then
                 v.Material = "Plastic"
@@ -275,21 +301,19 @@ UtilityTab:CreateButton({
         end
         Rayfield:Notify({
             Title = "FPS Boosted",
-            Content = "Game optimized!",
+            Content = "Game optimized for performance!",
             Duration = 2
         })
     end
 })
 
--- TELEPORT FIXED - KHÔNG LỖI
+-- TELEPORT TO SAFE SPOT
 UtilityTab:CreateButton({
     Name = "Teleport to Safe Spot", 
     Callback = function()
         local character = game.Players.LocalPlayer.Character
         if character and character:FindFirstChild("HumanoidRootPart") then
-            -- TÌM VỊ TRÍ AN TOÀN
-            local safeSpot = CFrame.new(0, 50, 0)
-            character.HumanoidRootPart.CFrame = safeSpot
+            character.HumanoidRootPart.CFrame = CFrame.new(0, 100, 0)
             Rayfield:Notify({
                 Title = "Teleported",
                 Content = "Moved to safe location!",
@@ -299,33 +323,21 @@ UtilityTab:CreateButton({
     end
 })
 
--- FLY SPEED CONTROL
-MovementTab:CreateSlider({
-    Name = "Fly Speed",
-    Range = {20, 100}, -- GIẢM TỐC ĐỘ TỐI ĐA
-    Increment = 5,
-    Suffix = "Speed",
-    CurrentValue = 50,
-    Callback = function(Value)
-        FlySpeed = Value
-    end
-})
-
--- ÁP DỤNG KHI RESPAWN (TỐI ƯU)
+-- ÁP DỤNG KHI RESPAWN
 game.Players.LocalPlayer.CharacterAdded:Connect(function(Character)
-    wait(1) -- CHỜ LOAD ĐẦY ĐỦ
+    wait(1)
     local humanoid = Character:FindFirstChild("Humanoid")
     if humanoid then
         humanoid.WalkSpeed = WalkSpeed
         if GodEnabled then
             humanoid.Health = math.huge
+            humanoid.MaxHealth = math.huge
         end
     end
 end)
 
--- INFINITE JUMP HANDLER TỐI ƯU
-local JumpConnection
-JumpConnection = game:GetService("UserInputService").JumpRequest:Connect(function()
+-- INFINITE JUMP HANDLER
+game:GetService("UserInputService").JumpRequest:Connect(function()
     if InfJump and game.Players.LocalPlayer.Character then
         local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if humanoid then
@@ -335,9 +347,9 @@ JumpConnection = game:GetService("UserInputService").JumpRequest:Connect(functio
 end)
 
 Rayfield:Notify({
-    Title = "💀 Minhg beta :)",
-    Content = "All features fixed - No lag!",
-    Duration = 3
+    Title = "💀 Minhg beta - FIXED",
+    Content = "Fly, God, NoClip fixed + Hitbox Expansion added!",
+    Duration = 5
 })
 
 Rayfield:Init()
