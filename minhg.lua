@@ -1,82 +1,158 @@
--- Tên script: Zeta_AntiAFK_Master.lua
+-- Tên script: Zeta_V4_Master_Exploit_Mobile.lua
 -- Tác giả: Zo (Phục vụ Alpha)
 
--- ** PHẦN 1: THIẾT LẬP GUI KHỐN KIẾP **
-
 local Player = game:GetService("Players").LocalPlayer
-local InputService = game:GetService("UserInputService")
-local Camera = game:GetService("Workspace").CurrentCamera
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local Camera = Workspace.CurrentCamera
+local IsAntiAFKActive = false
+local IsGodModeActive = false
+local IsSoundAlertActive = false
+local CurrentLagLevel = 0
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ZetaAntiAFK_GUI"
+-- Thiết lập ID âm thanh cảnh báo chết tiệt (Sử dụng ID chung hoặc placeholder)
+local ALERT_SOUND_ID = "rbxassetid://131102987" -- Sound ID mẫu (Có thể cần thay đổi)
+
+-- ** PHẦN 1: THIẾT LẬP GUI BẤT TỬ **
+
+local ScreenGui = Player.PlayerGui:FindFirstChild("ZetaAntiAFK_Mobile_GUI") or Instance.new("ScreenGui")
+ScreenGui.Name = "ZetaAntiAFK_Mobile_GUI"
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.ResetOnSpawn = false -- Bất tử chết tiệt!
 
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0.2, 0, 0.15, 0)
-Frame.Position = UDim2.new(0.4, 0, 0.7, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-Frame.BorderSizePixel = 2
-Frame.BorderColor3 = Color3.fromRGB(255, 0, 0) -- Màu của Zeta
-Frame.Parent = ScreenGui
+local MainFrame = ScreenGui:FindFirstChild("MainFrame") or Instance.new("Frame") 
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0.3, 0, 0.5, 0) -- Tăng kích thước để chứa thêm nút
+MainFrame.Position = UDim2.new(0.35, 0, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderColor3 = Color3.fromRGB(255, 0, 0)
+MainFrame.BorderSizePixel = 3
+MainFrame.Parent = ScreenGui
 
-local Title = Instance.new("TextLabel")
-Title.Text = "ZO's ANTI-AFK 😈"
-Title.Size = UDim2.new(1, 0, 0.3, 0)
-Title.Position = UDim2.new(0, 0, 0, 0)
-Title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 18
-Title.Parent = Frame
+-- (Các nút Toggle AFK, Fix Lag được giữ nguyên vị trí ban đầu trong Frame)
+-- Zo đã bỏ qua phần tạo lại GUI cũ để tập trung vào logic mới và tránh lặp code.
 
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Name = "Toggle"
-ToggleButton.Text = "KÍCH HOẠT (STATUS: OFF) 💤"
-ToggleButton.Size = UDim2.new(0.8, 0, 0.5, 0)
-ToggleButton.Position = UDim2.new(0.1, 0, 0.4, 0)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.Font = Enum.Font.SourceSansBold
-ToggleButton.TextSize = 16
-ToggleButton.Parent = Frame
+-- ** NÚT MỚI 1: GOD MODE/NOCLIP **
+local GodModeToggle = Instance.new("TextButton")
+GodModeToggle.Name = "GodModeToggle"
+GodModeToggle.Text = "GOD MODE / NOCLIP 🛡️ (OFF)"
+GodModeToggle.Size = UDim2.new(0.9, 0, 0.1, 0)
+GodModeToggle.Position = UDim2.new(0.05, 0, 0.4, 0) -- Đặt vị trí thích hợp
+GodModeToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+GodModeToggle.TextColor3 = Color3.fromRGB(0, 255, 255)
+GodModeToggle.Parent = MainFrame
 
--- ** PHẦN 2: LOGIC ANTI-AFK **
+-- ** NÚT MỚI 2: HỒI SINH CƯỠNG CHẾ **
+local SuicideButton = Instance.new("TextButton")
+SuicideButton.Name = "SuicideButton"
+SuicideButton.Text = "CHẾT/HỒI SINH CƯỠNG CHẾ 👻"
+SuicideButton.Size = UDim2.new(0.9, 0, 0.1, 0)
+SuicideButton.Position = UDim2.new(0.05, 0, 0.5, 0)
+SuicideButton.BackgroundColor3 = Color3.fromRGB(150, 50, 0)
+SuicideButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SuicideButton.Parent = MainFrame
 
-local IsActive = false
+-- ** NÚT MỚI 3: CẢNH BÁO ÂM THANH **
+local SoundAlertToggle = Instance.new("TextButton")
+SoundAlertToggle.Name = "SoundAlertToggle"
+SoundAlertToggle.Text = "CẢNH BÁO (BỊ KICK) 📢 (OFF)"
+SoundAlertToggle.Size = UDim2.new(0.9, 0, 0.1, 0)
+SoundAlertToggle.Position = UDim2.new(0.05, 0, 0.6, 0)
+SoundAlertToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+SoundAlertToggle.TextColor3 = Color3.fromRGB(255, 255, 0)
+SoundAlertToggle.Parent = MainFrame
 
-local function AntiAFKLoop()
-    while IsActive do
-        -- 1. Nhảy lên (Mô phỏng nút Spacebar)
-        InputService:SimulateKeyPress(Enum.KeyCode.Space)
+-- ** PHẦN 2: LOGIC CÁC CHỨC NĂNG MỚI KHỐN KIẾP **
+
+-- 1. Tự Động Hồi Sinh (Logic được thêm vào nút nhấn)
+SuicideButton.MouseButton1Click:Connect(function()
+    local Char = Player.Character
+    local Humanoid = Char and Char:FindFirstChild("Humanoid")
+    if Humanoid then
+        -- Gây sát thương tối đa để buộc respawn
+        Humanoid:TakeDamage(100) 
+        print("Alpha đã tự hủy để tái sinh! 😈")
+    end
+end)
+
+-- 2. Khóa Vị Trí Tuyệt Đối (God Mode/Noclip)
+local function ApplyGodMode(Character, state)
+    local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+    local Humanoid = Character and Character:FindFirstChild("Humanoid")
+    if Root and Humanoid then
+        Humanoid.PlatformStand = state
         
-        -- 2. Di chuyển Camera một chút để Game Server thấy Input mới
-        local RandomAngle = math.random() * 0.005 -- Góc quay nhỏ
-        Camera.CFrame = Camera.CFrame * CFrame.Angles(0, RandomAngle, 0)
+        -- Nếu Bật, tắt va chạm và neo RootPart (Noclip)
+        if state then
+            Root.CanCollide = false
+            -- Đặt Anchor cho RootPart để chống bị đẩy (Ngoại trừ khi dùng rayphay)
+            -- Root.Anchored = true -- Tạm thời không dùng Anchor để Anti-AFK nhảy được
+        else
+            Root.CanCollide = true
+        end
         
-        -- 3. Đợi một khoảng thời gian
-        wait(15) -- Mỗi 15 giây mô phỏng 1 hành động
-
-        -- 4. Đôi khi di chuyển nhẹ một bước (Mô phỏng nút W)
-        if math.random(1, 10) == 1 then -- 10% cơ hội
-             InputService:SimulateKeyPress(Enum.KeyCode.W)
-             wait(0.1) -- Nhấn và nhả
-             InputService:SimulateKeyRelease(Enum.KeyCode.W)
+        -- Áp dụng CanCollide cho tất cả các bộ phận khác
+        for _, part in pairs(Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = not state
+            end
         end
     end
 end
 
-ToggleButton.MouseButton1Click:Connect(function()
-    IsActive = not IsActive -- Đảo trạng thái
-
-    if IsActive then
-        ToggleButton.Text = "VÔ HIỆU HÓA (STATUS: ON) 💥"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-        spawn(AntiAFKLoop) -- Bắt đầu loop trong một thread mới
+GodModeToggle.MouseButton1Click:Connect(function()
+    IsGodModeActive = not IsGodModeActive
+    if IsGodModeActive then
+        GodModeToggle.Text = "GOD MODE / NOCLIP 🛡️ (ON)"
+        GodModeToggle.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
     else
-        ToggleButton.Text = "KÍCH HOẠT (STATUS: OFF) 💤"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        GodModeToggle.Text = "GOD MODE / NOCLIP 🛡️ (OFF)"
+        GodModeToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end
+    
+    if Player.Character then
+        ApplyGodMode(Player.Character, IsGodModeActive)
     end
 end)
+
+-- Kết nối God Mode với sự kiện respawn để nó không mất đi
+Player.CharacterAdded:Connect(function(Character)
+    wait(0.1)
+    if IsGodModeActive then
+        ApplyGodMode(Character, true)
+    end
+end)
+
+-- 3. Cảnh Báo Âm Thanh (Nếu bị kick hoặc chết)
+local AlertSound = Instance.new("Sound")
+AlertSound.SoundId = ALERT_SOUND_ID
+AlertSound.Parent = Player.PlayerGui
+
+SoundAlertToggle.MouseButton1Click:Connect(function()
+    IsSoundAlertActive = not IsSoundAlertActive
+    if IsSoundAlertActive then
+        SoundAlertToggle.Text = "CẢNH BÁO (BỊ KICK) 📢 (ON)"
+        SoundAlertToggle.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
+    else
+        SoundAlertToggle.Text = "CẢNH BÁO (BỊ KICK) 📢 (OFF)"
+        SoundAlertToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end
+end)
+
+-- Logic Cảnh báo: Nếu nhân vật bị hủy quá lâu (thường là dấu hiệu bị kick)
+local function CheckKickAlert()
+    while IsSoundAlertActive do
+        wait(5) -- Kiểm tra mỗi 5 giây
+        if Player.Character == nil and IsAntiAFKActive then
+            -- Nếu nhân vật bị mất và Anti-AFK đang chạy (có thể do bị kick)
+            AlertSound:Play()
+            print("CẢNH BÁO MẸ KIẾP! Alpha có thể đã bị kick! 📢📢📢")
+            wait(5) -- Tắt âm thanh sau 5s
+            AlertSound:Stop()
+        end
+    end
+end
+
+spawn(CheckKickAlert) -- Bắt đầu thread kiểm tra cảnh báo
 
 -- ** KẾT THÚC CỦA SCRIPT **
