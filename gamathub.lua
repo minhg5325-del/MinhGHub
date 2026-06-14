@@ -85,7 +85,7 @@ NameInput.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 NameInput.BorderSizePixel = 1
 NameInput.BorderColor3 = Color3.fromRGB(40, 40, 50)
 NameInput.Text = "Gamer_Map_Chuan_Fix"
-NameInput.PlaceholderText = "Đặt tên file..."
+NameInput.PlaceholderText = "Enter file name..."
 NameInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 NameInput.Font = Enum.Font.SourceSans
 NameInput.TextSize = 13
@@ -98,7 +98,7 @@ DropdownBtn.Position = UDim2.new(0, 15, 0, 85)
 DropdownBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
 DropdownBtn.BorderSizePixel = 1
 DropdownBtn.BorderColor3 = Color3.fromRGB(0, 200, 255)
-DropdownBtn.Text = "▼ MỞ BẢNG BỘ LỌC (MẶC ĐỊNH: FULL MAP)"
+DropdownBtn.Text = "▼ OPEN FILTER PANEL (DEFAULT: FULL MAP)"
 DropdownBtn.TextColor3 = Color3.fromRGB(0, 220, 255)
 DropdownBtn.Font = Enum.Font.SourceSansBold
 DropdownBtn.TextSize = 12
@@ -122,12 +122,12 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Parent = ScrollFrame
 
 local Filters = {
-    {Name = "Workspace (Khối 3D/Map)", Target = game:GetService("Workspace"), Active = true},
-    {Name = "StarterGui (Giao diện/UI)", Target = game:GetService("StarterGui"), Active = true},
-    {Name = "ReplicatedStorage (Mô hình/Data)", Target = game:GetService("ReplicatedStorage"), Active = true},
-    {Name = "Lighting (Ánh sáng/VFX)", Target = game:GetService("Lighting"), Active = true},
-    {Name = "ReplicatedFirst (Loading Game)", Target = game:GetService("ReplicatedFirst"), Active = true},
-    {Name = "StarterPack (Túi đồ/Vũ khí)", Target = game:GetService("StarterPack"), Active = true},
+    {Name = "Workspace (3D Blocks/Map)", Target = game:GetService("Workspace"), Active = true},
+    {Name = "StarterGui (User Interface/UI)", Target = game:GetService("StarterGui"), Active = true},
+    {Name = "ReplicatedStorage (Models/Data)", Target = game:GetService("ReplicatedStorage"), Active = true},
+    {Name = "Lighting (Lights/VFX)", Target = game:GetService("Lighting"), Active = true},
+    {Name = "ReplicatedFirst (Loading Assets)", Target = game:GetService("ReplicatedFirst"), Active = true},
+    {Name = "StarterPack (Inventory/Weapons)", Target = game:GetService("StarterPack"), Active = true},
 }
 
 for i, filter in ipairs(Filters) do
@@ -160,17 +160,17 @@ local isOpen = false
 DropdownBtn.MouseButton1Click:Connect(function()
     isOpen = not isOpen
     if isOpen then
-        DropdownBtn.Text = "▲ THU GỌN DANH SÁCH BỘ LỌC"
+        DropdownBtn.Text = "▲ COLLAPSE FILTER LIST"
         Main.Size = UDim2.new(0, 340, 0, 360)
         ScrollFrame.Visible = true
     else
-        DropdownBtn.Text = "▼ MỞ BẢNG BỘ LỌC (MẶC ĐỊNH: FULL MAP)"
+        DropdownBtn.Text = "▼ OPEN FILTER PANEL (DEFAULT: FULL MAP)"
         Main.Size = UDim2.new(0, 340, 0, 230)
         ScrollFrame.Visible = false
     end
 end)
 
--- THANH TIẾN ĐỘ
+-- PROGRESS BAR
 local ProgressBG = Instance.new("Frame")
 ProgressBG.Size = UDim2.new(1, -30, 0, 10)
 ProgressBG.Position = UDim2.new(0, 15, 1, -90)
@@ -247,20 +247,20 @@ ActionBtn.MouseButton1Click:Connect(function()
     end
 
     ActionBtn.Active = false
-    ActionBtn.Text = "⏳ ĐANG XỬ LÝ..."
+    ActionBtn.Text = "⏳ PROCESSING..."
     ActionBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 
     resetProgress()
 
-    setProgress(0.20, "⚙️ [1/5] Khởi động engine USSI...")
+    setProgress(0.20, "⚙️ [1/5] Initializing USSI engine...")
     task.wait(0.3)
-    setProgress(0.40, "📦 [2/5] Đang tải module USSI từ GitHub...")
+    setProgress(0.40, "📦 [2/5] Fetching USSI module from GitHub...")
     task.wait(0.3)
 
     local success, err = pcall(function()
         local USSI_Script = game:HttpGet("https://raw.githubusercontent.com/luau/UniversalSynSaveInstance/main/saveinstance.luau", true)
         
-        setProgress(0.60, "🔧 [3/5] Biên dịch module...")
+        setProgress(0.60, "🔧 [3/5] Compiling module...")
         task.wait(0.2)
         
         local USSI_Module = loadstring(USSI_Script)()
@@ -274,10 +274,10 @@ ActionBtn.MouseButton1Click:Connect(function()
             saveinstance_func = (getgenv and getgenv().saveinstance) or _G.saveinstance or _G.synsaveinstance
         end
         if type(saveinstance_func) ~= "function" then
-            error("Engine USSI không phản hồi!")
+            error("USSI Engine not responding!")
         end
 
-        setProgress(0.80, "🗂️ [4/5] Phân tích bộ lọc & cấu trúc map...")
+        setProgress(0.80, "🗂️ [4/5] Analyzing filters & map structure...")
         task.wait(0.3)
 
         local selectedObjects = {}
@@ -291,7 +291,8 @@ ActionBtn.MouseButton1Click:Connect(function()
         end
 
         local Options = {
-            noscripts = true,
+            noscripts = false,
+            DecompileScripts = true,
             RemovePlayerCharacters = true,
             SaveWorkspaceTerrain = false,
             IsBinary = false,
@@ -305,29 +306,23 @@ ActionBtn.MouseButton1Click:Connect(function()
             Options.Objects = selectedObjects
         end
 
-        setProgress(0.90, "💾 [5/5] Đang tiến hành ghi file...")
+        setProgress(0.90, "💾 [5/5] Writing file and decompiling scripts...")
 
-        -- BẺ KHÓA LỆNH KICK (ANTI-KICK BYPASS): 
-        -- Chặn đứng lệnh Player:Kick() từ file GitHub gửi tới.
         local lp = Players.LocalPlayer
         local oldKick
         oldKick = hookmetamethod(game, "__namecall", function(self, ...)
             local method = getnamecallmethod()
             if self == lp and (method == "Kick" or method == "kick") then
-                -- Phát hiện lệnh kick ngầm -> Chặn lại và không cho thực thi
                 return nil 
             end
             return oldKick(self, ...)
         end)
 
-        -- Thực hiện hành động lưu thật sự
         saveinstance_func(Options)
         
-        -- Chờ 1 giây để file được ghi hoàn tất vào bộ nhớ của Delta
         task.wait(1)
 
-        -- Sau khi lưu an toàn, lúc này mới ép thanh tiến độ lên 100% hoàn hảo
-        setProgress(1.0, "✔ HOÀN TẤT! Đã lưu vào Delta/workspace!", Color3.fromRGB(0, 255, 150))
+        setProgress(1.0, "✔ SUCCESS! Saved to Delta/workspace!", Color3.fromRGB(0, 255, 150))
         ProgressFill.BackgroundColor3 = Color3.fromRGB(0, 220, 120)
         ActionBtn.Text = "✔ EXTRACT COMPLETED"
         ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
@@ -335,11 +330,11 @@ ActionBtn.MouseButton1Click:Connect(function()
     end)
 
     if not success then
-        setProgress(1.0, "❌ LỖI! Kiểm tra Console F9.", Color3.fromRGB(255, 75, 75))
+        setProgress(1.0, "❌ ERROR! Check F9 Console.", Color3.fromRGB(255, 75, 75))
         ProgressFill.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
         ActionBtn.Text = "❌ EXTRACT FAILED"
         ActionBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-        print("Lỗi USSI: ", err)
+        print("USSI Error: ", err)
     end
 
     task.wait(3)
