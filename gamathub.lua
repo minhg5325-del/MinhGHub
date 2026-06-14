@@ -3,12 +3,12 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 
-if CoreGui:FindFirstChild("DeltaUssiCyberGUI") then 
-    CoreGui.DeltaUssiCyberGUI:Destroy() 
+if CoreGui:FindFirstChild("DeltaGamathubGUI") then 
+    CoreGui.DeltaGamathubGUI:Destroy() 
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DeltaUssiCyberGUI"
+ScreenGui.Name = "DeltaGamathubGUI"
 ScreenGui.Parent = CoreGui
 
 local Main = Instance.new("Frame")
@@ -58,7 +58,7 @@ local Title = Instance.new("TextLabel")
 Title.Name = "Title"
 Title.Size = UDim2.new(1, -40, 0, 35)
 Title.Position = UDim2.new(0, 15, 0, 5)
-Title.Text = "⚡ USSI CYBERPUNK RGB v3.0 ⚡"
+Title.Text = "⚡ GAMATHUB RGB v3.0 ⚡" -- Đổi tên tiêu đề GUI
 Title.Font = Enum.Font.Code
 Title.TextSize = 14
 Title.BackgroundTransparency = 1
@@ -211,7 +211,7 @@ ActionBtn.Position = UDim2.new(0, 15, 1, -50)
 ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 90, 200)
 ActionBtn.BorderSizePixel = 1
 ActionBtn.BorderColor3 = Color3.fromRGB(0, 180, 255)
-ActionBtn.Text = "EXECUTE EXTRACT PROJECT"
+ActionBtn.Text = "EXECUTE GAMATHUB EXTRACT" -- Đổi tên nút bấm chính
 ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ActionBtn.Font = Enum.Font.Code
 ActionBtn.TextSize = 13
@@ -252,9 +252,9 @@ ActionBtn.MouseButton1Click:Connect(function()
 
     resetProgress()
 
-    setProgress(0.20, "⚙️ [1/5] Initializing USSI engine...")
+    setProgress(0.20, "⚙️ [1/5] Initializing engine...")
     task.wait(0.3)
-    setProgress(0.40, "📦 [2/5] Fetching USSI module from GitHub...")
+    setProgress(0.40, "📦 [2/5] Fetching module from GitHub...")
     task.wait(0.3)
 
     local success, err = pcall(function()
@@ -274,7 +274,7 @@ ActionBtn.MouseButton1Click:Connect(function()
             saveinstance_func = (getgenv and getgenv().saveinstance) or _G.saveinstance or _G.synsaveinstance
         end
         if type(saveinstance_func) ~= "function" then
-            error("USSI Engine not responding!")
+            error("Engine not responding!")
         end
 
         setProgress(0.80, "🗂️ [4/5] Analyzing filters & map structure...")
@@ -324,7 +324,7 @@ ActionBtn.MouseButton1Click:Connect(function()
 
         setProgress(1.0, "✔ SUCCESS! Saved to Delta/workspace!", Color3.fromRGB(0, 255, 150))
         ProgressFill.BackgroundColor3 = Color3.fromRGB(0, 220, 120)
-        ActionBtn.Text = "✔ EXTRACT COMPLETED"
+        ActionBtn.Text = "✔ GAMATHUB EXTRACT COMPLETED" -- Đổi trạng thái hoàn tất
         ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
         ActionBtn.BorderColor3 = Color3.fromRGB(0, 255, 150)
     end)
@@ -332,14 +332,14 @@ ActionBtn.MouseButton1Click:Connect(function()
     if not success then
         setProgress(1.0, "❌ ERROR! Check F9 Console.", Color3.fromRGB(255, 75, 75))
         ProgressFill.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        ActionBtn.Text = "❌ EXTRACT FAILED"
+        ActionBtn.Text = "❌ GAMATHUB EXTRACT FAILED" -- Đổi trạng thái thất bại
         ActionBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-        print("USSI Error: ", err)
+        print("Gamathub Error: ", err)
     end
 
     task.wait(3)
     ActionBtn.Active = true
-    ActionBtn.Text = "EXECUTE EXTRACT PROJECT"
+    ActionBtn.Text = "EXECUTE GAMATHUB EXTRACT"
     ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 90, 200)
     ActionBtn.BorderColor3 = Color3.fromRGB(0, 180, 255)
 end)
