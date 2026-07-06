@@ -1,5 +1,4 @@
-
-local CoreGui = game:GetService("CoreGui")
+Local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -63,7 +62,7 @@ local Title = Instance.new("TextLabel")
 Title.Name = "Title"
 Title.Size = UDim2.new(1, -40, 0, 35)
 Title.Position = UDim2.new(0, 15, 0, 5)
-Title.Text = "⚡ GAMATHUB SAFE-EXTRACT v4.1 MAX ⚡"
+Title.Text = "⚡ GAMATHUB SAFE-EXTRACT v4.0 ⚡"
 Title.Font = Enum.Font.Code
 Title.TextSize = 14
 Title.BackgroundTransparency = 1
@@ -92,7 +91,7 @@ NameInput.Position = UDim2.new(0, 15, 0, 45)
 NameInput.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 NameInput.BorderSizePixel = 1
 NameInput.BorderColor3 = Color3.fromRGB(40, 40, 50)
-NameInput.Text = "My_Map_Extract_Full"
+NameInput.Text = "My_Map_Extract"
 NameInput.PlaceholderText = "Enter file name..."
 NameInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 NameInput.Font = Enum.Font.SourceSans
@@ -121,7 +120,7 @@ ScrollFrame.BorderColor3 = Color3.fromRGB(40, 40, 45)
 ScrollFrame.Visible = false
 ScrollFrame.ScrollBarThickness = 4
 ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 200, 255)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 260)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 230)
 ScrollFrame.Parent = Main
 
 local UIListLayout = Instance.new("UIListLayout")
@@ -129,7 +128,6 @@ UIListLayout.Padding = UDim.new(0, 2)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Parent = ScrollFrame
 
--- [Đã Thêm] Thêm StarterPlayer để lấy toàn bộ LocalScript của nhân vật
 local Filters = {
     {Name = "Workspace (Map / 3D Blocks)",       Target = game:GetService("Workspace"),         Active = true},
     {Name = "ReplicatedStorage (Models / Data)", Target = game:GetService("ReplicatedStorage"), Active = true},
@@ -137,7 +135,6 @@ local Filters = {
     {Name = "Lighting (Effects / VFX)",          Target = game:GetService("Lighting"),          Active = true},
     {Name = "ReplicatedFirst (Preload Assets)",  Target = game:GetService("ReplicatedFirst"),   Active = true},
     {Name = "StarterPack (Tools / Weapons)",     Target = game:GetService("StarterPack"),       Active = true},
-    {Name = "StarterPlayer (Local Scripts)",     Target = game:GetService("StarterPlayer"),     Active = true}, 
 }
 
 for _, filter in ipairs(Filters) do
@@ -223,7 +220,7 @@ ActionBtn.Position = UDim2.new(0, 15, 1, -50)
 ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 90, 200)
 ActionBtn.BorderSizePixel = 1
 ActionBtn.BorderColor3 = Color3.fromRGB(0, 180, 255)
-ActionBtn.Text = "EXECUTE EXTRACT (FULL MAP + SCRIPTS)"
+ActionBtn.Text = "EXECUTE EXTRACT (ANTI-CRASH)"
 ActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ActionBtn.Font = Enum.Font.Code
 ActionBtn.TextSize = 13
@@ -249,7 +246,7 @@ end
 
 local function resetUI()
     ActionBtn.Active = true
-    ActionBtn.Text = "EXECUTE EXTRACT (FULL MAP + SCRIPTS)"
+    ActionBtn.Text = "EXECUTE EXTRACT (ANTI-CRASH)"
     ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 90, 200)
     ActionBtn.BorderColor3 = Color3.fromRGB(0, 180, 255)
 end
@@ -258,7 +255,7 @@ ActionBtn.MouseButton1Click:Connect(function()
     if not ActionBtn.Active then return end
 
     local finalFileName = NameInput.Text:gsub("^%s*(.-)%s*$", "%1")
-    if finalFileName == "" then finalFileName = "My_Map_Extract_Full" end
+    if finalFileName == "" then finalFileName = "My_Map_Extract" end
     finalFileName = finalFileName:gsub("%.rbxlx$", ""):gsub("%.rbxl$", "") .. ".rbxlx"
 
     ActionBtn.Active = false
@@ -332,15 +329,12 @@ ActionBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- [ĐÃ SỬA CHỮA Ở ĐÂY] - Tối ưu toàn bộ Options để lấy sạch sẽ
         local Options = {
-            noscripts = false,              -- FALSE: Không bỏ qua script, cho phép copy script
-            DecompileScripts = true,        -- TRUE: Bật dịch ngược code để lấy nội dung Local/Module Script
-            RemovePlayerCharacters = true,  -- Xóa nhân vật người chơi để tránh lưu rác vào map
-            SaveWorkspaceTerrain = true,    -- TRUE: Bắt buộc lấy Địa hình (Terrain) để không bị lủng map
-            DecompileTimeout = 15,          -- Cho thêm thời gian decompile các script quá nặng
-            IsolateStarterPlayer = true,    -- Bảo mật và lấy an toàn thư mục StarterPlayer
-            IsBinary = false,               -- Xuất file rbxlx chống lỗi cấu trúc
+            noscripts = true,
+            DecompileScripts = false,
+            RemovePlayerCharacters = true,
+            SaveWorkspaceTerrain = false,
+            IsBinary = false,
             Disconnect = false,
             FileName = finalFileName,
         }
@@ -352,13 +346,13 @@ ActionBtn.MouseButton1Click:Connect(function()
             Options.Objects = selectedObjects
         end
 
-        setProgress(0.8, "💾 [5/5] Writing file: " .. finalFileName .. "... (May take a while!)")
+        setProgress(0.8, "💾 [5/5] Writing file: " .. finalFileName .. "...")
         task.wait(0.5)
 
         local success, err = pcall(saveinstance_func, Options)
 
         if success then
-            setProgress(1.0, "✔ SUCCESS! Map & Scripts saved to workspace folder.", Color3.fromRGB(0, 255, 150))
+            setProgress(1.0, "✔ SUCCESS! Saved to Delta/workspace folder.", Color3.fromRGB(0, 255, 150))
             ActionBtn.Text = "✔ EXTRACT COMPLETE"
             ActionBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
             ActionBtn.BorderColor3 = Color3.fromRGB(0, 255, 150)
@@ -369,7 +363,7 @@ ActionBtn.MouseButton1Click:Connect(function()
             warn("[USSI Error]", tostring(err))
         end
 
-        task.wait(5)
+        task.wait(4)
         resetUI()
         setProgress(0, "⚙️ SYSTEM READY | ALL SERVICES SELECTED")
     end)
