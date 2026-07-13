@@ -1,0 +1,169 @@
+-- [[ DETECT & COPY ANIMATION IDs SCRIPT FOR DELTA ]]
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AnimScannerGui"
+ScreenGui.ResetOnSpawn = false
+
+-- Bảo vệ GUI không bị game quét trúng (nếu executor hỗ trợ)
+if syn and syn.protect_gui then 
+    syn.protect_gui(ScreenGui) 
+end
+ScreenGui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+
+-- Khung Menu Chính
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 330, 0, 420)
+MainFrame.Position = UDim2.new(0.5, -165, 0.5, -210)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true -- Giúp ông dễ dàng kéo di chuyển trên màn hình điện thoại
+MainFrame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 10)
+Corner.Parent = MainFrame
+
+-- Tiêu đề Menu
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -40, 0, 40)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.Text = "Animation ID Scanner"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+Title.Font = Enum.Font.SourceSansBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+Title.Parent = MainFrame
+
+-- Nút Đóng (X)
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+CloseBtn.TextSize = 16
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Parent = MainFrame
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+-- Khu vực cuộn danh sách ID
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Size = UDim2.new(1, -20, 1, -100)
+ScrollingFrame.Position = UDim2.new(0, 10, 0, 45)
+ScrollingFrame.BackgroundTransparency = 1
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingFrame.ScrollBarThickness = 4
+ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+ScrollingFrame.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 6)
+UIListLayout.Parent = ScrollingFrame
+
+-- Nút Quét / Làm mới
+local RefreshBtn = Instance.new("TextButton")
+RefreshBtn.Size = UDim2.new(1, -20, 0, 38)
+RefreshBtn.Position = UDim2.new(0, 10, 1, -48)
+RefreshBtn.BackgroundColor3 = Color3.fromRGB(45, 125, 250)
+RefreshBtn.Text = "Quét / Refresh Animation"
+RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+RefreshBtn.TextSize = 15
+RefreshBtn.Font = Enum.Font.SourceSansBold
+RefreshBtn.Parent = MainFrame
+
+local Corner2 = Instance.new("UICorner")
+Corner2.CornerRadius = UDim.new(0, 6)
+Corner2.Parent = RefreshBtn
+
+-- Logic quét và cập nhật danh sách
+local function updateList()
+    -- Xóa danh sách cũ trước khi quét mới
+    for _, item in ipairs(ScrollingFrame:GetChildren()) do
+        if item:IsA("TextButton") or item:IsA("TextLabel") then 
+            item:Destroy() 
+        end
+    end
+
+    local animIds = {}
+    local hash = {} -- Dùng bảng băm để lọc trùng ID cực chuẩn
+
+    -- Hàm quét đệ quy
+    local function scan(parent)
+        for _, v in ipairs(parent:GetDescendants()) do
+            if v:IsA("Animation") and v.AnimationId and v.AnimationId ~= "" then
+                -- Trích xuất chuỗi số nguyên thuần túy từ AnimationId
+                local cleanId = v.AnimationId:match("%d+")
+                if cleanId and not hash[cleanId] then
+                    hash[cleanId] = true
+                    table.insert(animIds, {id = cleanId, name = v.Name})
+                end
+            end
+        end
+    end
+
+    -- Các khu vực chứa asset chạy ngầm và map của game
+    local services = {
+        game:GetService("Workspace"),
+        game:GetService("ReplicatedStorage"),
+        game:GetService("ReplicatedFirst"),
+        game:GetService("StarterGui"),
+        game:GetService("StarterPack"),
+        game:GetService("Players").LocalPlayer
+    }
+
+    for _, service in ipairs(services) do
+        pcall(function() scan(service) end)
+    end
+
+    -- Tự động căn chỉnh độ dài thanh cuộn dựa trên số lượng ID tìm thấy
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, #animIds * 41)
+
+    if #animIds == 0 then
+        local NoAnim = Instance.new("TextLabel")
+        NoAnim.Size = UDim2.new(1, 0, 0, 40)
+        NoAnim.Text = "Không tìm thấy Animation nào!"
+        NoAnim.TextColor3 = Color3.fromRGB(150, 150, 150)
+        NoAnim.BackgroundTransparency = 1
+        NoAnim.Font = Enum.Font.SourceSansItalic
+        NoAnim.TextSize = 14
+        NoAnim.Parent = ScrollingFrame
+        return
+    end
+
+    -- Hiển thị danh sách lên menu
+    for _, data in ipairs(animIds) do
+        local ItemBtn = Instance.new("TextButton")
+        ItemBtn.Size = UDim2.new(1, -8, 0, 35)
+        ItemBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        ItemBtn.Text = "  [" .. data.name .. "] -> " .. data.id
+        ItemBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+        ItemBtn.TextSize = 14
+        ItemBtn.Font = Enum.Font.SourceSans
+        ItemBtn.TextXAlignment = Enum.TextXAlignment.Left
+        ItemBtn.Parent = ScrollingFrame
+
+        local ItemCorner = Instance.new("UICorner")
+        ItemCorner.CornerRadius = UDim.new(0, 5)
+        ItemCorner.Parent = ItemBtn
+
+        -- Sự kiện bấm để Copy trực tiếp
+        ItemBtn.MouseButton1Click:Connect(function()
+            if setclipboard then
+                setclipboard(data.id)
+                ItemBtn.Text = "  ✓ Đã copy thành công!"
+                ItemBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
+                task.wait(0.8)
+                ItemBtn.Text = "  [" .. data.name .. "] -> " .. data.id
+                ItemBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+            else
+                ItemBtn.Text = "  Executor không hỗ trợ setclipboard!"
+                ItemBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+            end
+        end)
+    end
+end
+
+-- Kích hoạt
+RefreshBtn.MouseButton1Click:Connect(updateList)
+updateList() -- Tự động quét luôn một lần khi vừa mới inject script vào game
