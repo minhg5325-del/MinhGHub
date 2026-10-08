@@ -2,12 +2,15 @@
 --[[
 	=========================================================
 	AutoFish.delta.luau  —  LootBound
-	Bản Delta Mobile: nút cảm ứng kéo được, double-tap toggle,
-	rung khi bắt cá, tự chạy lại sau khi respawn.
-	Không phụ thuộc phím cứng.
+	Bản Delta Mobile + Anti-AFK tích hợp
 	=========================================================
 	DÁN vào Delta > Execute (không cần đặt vào StarterPlayerScripts).
 	Yêu cầu: đứng cạnh nước, KHÔNG lên thuyền.
+	=========================================================
+	ANTI-AFK: tự động, không cần bật. 3 tầng phòng ngừa:
+	  1. Hook LocalPlayer.Idled (chuẩn Roblox, fire sau ~20 phút)
+	  2. Reset timer mỗi 60s qua VirtualUser
+	  3. Mouse move ảo mỗi 45s (nếu executor có mousemoverel)
 	=========================================================
 ]]
 
@@ -16,7 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService        = game:GetService("RunService")
 local UserInputService  = game:GetService("UserInputService")
 local HapticService     = game:GetService("HapticService")
-local GuiService        = game:GetService("GuiService")
+local VirtualUser       = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -25,11 +28,10 @@ local LocalPlayer = Players.LocalPlayer
 -- ==========================================================
 local CONFIG = {
 	Enabled = false,
-	ToggleKey = Enum.KeyCode.F8,        -- vẫn dùng được nếu có bàn phím Bluetooth
+	ToggleKey = Enum.KeyCode.F8,
 
-	-- Mobile: đặt giữa-trên để tránh joystick (trái-dưới) và jump (phải-dưới)
 	ButtonPos = UDim2.new(0.5, -80, 0, 50),
-	SafeAreaTop = 36,                   -- chừa status bar Roblox mobile
+	SafeAreaTop = 36,
 
 	CastRetryDelay = 1.2,
 	MaxRetryDelay  = 6.0,
@@ -40,10 +42,46 @@ local CONFIG = {
 	DefaultPlayerWidth = 80,
 
 	ShowStatus        = true,
-	HapticOnCatch     = true,           -- rung khi bắt được cá
+	HapticOnCatch     = true,
 	HapticDuration    = 0.15,
-	MinimizeOnTap     = false,          -- true = chạm 1 lần để thu nhỏ thành icon
+	MinimizeOnTap     = false,
 }
+
+-- ==========================================================
+-- ANTI-AFK — tự động, không cần bật
+-- ==========================================================
+-- Tầng 1: hook sự kiện chuẩn — fire khi Roblox sắp kick vì AFK (~20 phút)
+LocalPlayer.Idled:Connect(function()
+	pcall(function()
+		VirtualUser:CaptureController()
+		VirtualUser:ClickButton2(Vector2.new())
+	end)
+end)
+
+-- Tầng 2: tự reset timer mỗi 60s — một số game patch Idled nên cần proactive
+task.spawn(function()
+	while true do
+		task.wait(60)
+		pcall(function()
+			VirtualUser:CaptureController()
+			VirtualUser:ClickButton2(Vector2.new())
+		end)
+	end
+end)
+
+-- Tầng 3: mouse move ảo mỗi 45s — executor-specific, chỉ chạy nếu có API
+if type(mousemoverel) == "function" then
+	task.spawn(function()
+		while true do
+			task.wait(45)
+			pcall(function()
+				mousemoverel(1, 0)
+				task.wait(0.05)
+				mousemoverel(-1, 0)
+			end)
+		end
+	end)
+end
 
 -- ==========================================================
 -- MODULE LOADER (Delta-safe)
@@ -54,15 +92,8 @@ local function softRequire(name)
 	if not folder then return nil end
 	local ms = folder:FindFirstChild(name, true)
 	if not ms or not ms:IsA("ModuleScript") then return nil end
-
-	-- Delta mobile đôi khi require public module trả nil, thử 2 cách
 	local ok, mod = pcall(require, ms)
 	if ok and type(mod) == "table" then return mod end
-
-	-- fallback: dùng debug.getupvalue trên require nếu executor hỗ trợ
-	if type(getscriptbytecode) == "function" then
-		return nil -- không có cách an toàn, để vòng lặp thử lại sau
-	end
 	return nil
 end
 
@@ -94,7 +125,6 @@ local function pulse()
 			pcall(function() HapticService:SetMotor(Enum.UserInputType.Gamepad1, Enum.VibrationMotor.Small, 0) end)
 		end)
 	end)
-	-- một số Delta build hỗ trợ thêm API rung
 	if type(executorvibrate) == "function" then
 		pcall(executorvibrate, CONFIG.HapticDuration)
 	end
@@ -103,7 +133,7 @@ end
 -- ==========================================================
 -- UI
 -- ==========================================================
-local gui, holder, toggleBtn, statusLbl, counterLbl, miniBtn, dragHandle
+local gui, holder, toggleBtn, statusLbl, counterLbl, miniBtn
 
 local COL_ON  = Color3.fromRGB(46, 160, 94)
 local COL_OFF = Color3.fromRGB(160, 52, 52)
@@ -160,10 +190,9 @@ local function buildUI()
 	gui.Name = "AutoFishGui"
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = 500
-	gui.IgnoreGuiInset = false -- mobile cần inset để tránh status bar
+	gui.IgnoreGuiInset = false
 	gui.Parent = pg
 
-	-- Holder: kéo được, chứa toàn bộ nút
 	holder = Instance.new("Frame")
 	holder.Name = "Holder"
 	holder.AnchorPoint = Vector2.new(0.5, 0)
@@ -173,7 +202,7 @@ local function buildUI()
 	holder.BackgroundTransparency = 0.15
 	holder.BorderSizePixel = 0
 	holder.Active = true
-	holder.Draggable = true        -- mobile: kéo bằng ngón tay
+	holder.Draggable = true
 	holder.Parent = gui
 
 	local corner = Instance.new("UICorner")
@@ -187,7 +216,6 @@ local function buildUI()
 	pad.PaddingBottom = UDim.new(0, 8)
 	pad.Parent = holder
 
-	-- Nút toggle: to, dễ chạm (>=48px)
 	toggleBtn = Instance.new("TextButton")
 	toggleBtn.Name = "Toggle"
 	toggleBtn.Position = UDim2.fromOffset(0, 0)
@@ -204,7 +232,6 @@ local function buildUI()
 	cb.CornerRadius = UDim.new(0, 10)
 	cb.Parent = toggleBtn
 
-	-- Nút minimize nhỏ ở góc phải
 	local minBtn = Instance.new("TextButton")
 	minBtn.Size = UDim2.fromOffset(32, 32)
 	minBtn.Position = UDim2.new(1, -32, 0, 0)
@@ -242,19 +269,16 @@ local function buildUI()
 	counterLbl.Text = "Đã câu: 0"
 	counterLbl.Parent = holder
 
-	-- Double-tap detection: 2 lần chạm trong 0.4s = toggle
 	toggleBtn.MouseButton1Click:Connect(function()
 		local now = os.clock()
 		if CONFIG.MinimizeOnTap then
 			setMinimized(true)
 			return
 		end
-		-- single tap = toggle luôn cho mobile (không cần double tap khó)
 		setEnabled(not enabled)
 		lastTapAt = now
 	end)
 
-	-- Mini button (khi thu nhỏ): icon tròn nhỏ
 	miniBtn = Instance.new("TextButton")
 	miniBtn.Name = "Mini"
 	miniBtn.AnchorPoint = Vector2.new(0.5, 0)
@@ -474,7 +498,7 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 
 -- ==========================================================
--- RESPAWN HANDLER (mobile hay bị disconnect)
+-- RESPAWN HANDLER
 -- ==========================================================
 LocalPlayer.CharacterAdded:Connect(function()
 	FishingController = nil
@@ -499,7 +523,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 end)
 
 -- ==========================================================
--- CLEANUP (Delta re-execute lần 2)
+-- CLEANUP
 -- ==========================================================
 getgenv().AutoFishCleanup = function()
 	pcall(function()
@@ -510,14 +534,7 @@ getgenv().AutoFishCleanup = function()
 	if gui then pcall(function() gui:Destroy() end) end
 end
 
--- Nếu re-execute, dọn bản cũ trước
-pcall(function()
-	if type(getgenv().AutoFishCleanup) == "function" then
-		-- bản mới của chính mình vừa ghi đè, không gọi lại — chỉ giữ hook
-	end
-end)
-
 task.spawn(buildUI)
 task.wait(0.2)
 setStatus("Chạm nút để bật/tắt")
-print("[AutoFish Delta] loaded — kéo nút để di chuyển, chạm để bật/tắt")
+print("[AutoFish Delta] loaded — Anti-AFK ON · kéo nút để di chuyển, chạm để bật/tắt")
